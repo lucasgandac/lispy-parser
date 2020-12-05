@@ -1,4 +1,4 @@
 parser-gabarito.py
 .vscode
 __pycache__
-.pytest-cache
+.pytest-cache.hypothesis/
