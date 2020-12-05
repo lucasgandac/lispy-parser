@@ -1,17 +1,6 @@
 import pytest
-import math
-from typing import Dict, Any, Union
 from lark import Lark
 from functools import lru_cache
-from hypothesis import given
-from hypothesis.strategies import floats, integers, one_of
-
-
-Xs = integers(-1_000, 1_000)
-pos_Xs = integers(1, 1_000)
-neg_Xs = integers(-1_000, -1)
-nonzero_Xs = one_of(pos_Xs, neg_Xs)
-short = integers(-5, 5)
 
 
 class Error(str):
@@ -21,7 +10,7 @@ class Error(str):
 
 @lru_cache(1)
 def mod():
-    ns: Dict[str, Any] = {"__name__": "parser"}
+    ns = {"__name__": "parser"}
     exec(open("parser.py").read(), ns)
     try:
         grammar = ns["grammar"]
@@ -30,19 +19,24 @@ def mod():
             "não definiu a gramática lark no módulo parser.py\n"
             "Defina a gramática e salve-a na variável grammar."
         )
-    if isinstance(grammar, str):
-        grammar: Lark = Lark(grammar)
+        if isinstance(grammar, str):
+            grammar = Lark(grammar)
 
     try:
-        transformer_class = ns["CalcTransformer"]
+        transformer_class = ns["LispyTransformer"]
     except KeyError:
-        raise ValueError("não definiu a classe CalcTransformer no módulo parser.py")
+        raise ValueError("não definiu a classe LispyTransformer no módulo parser.py")
 
-    return grammar, transformer_class
+    try:
+        symbol_class = ns["Symbol"]
+    except KeyError:
+        raise ValueError("não definiu a classe Symbol no módulo parser.py")
+
+    return grammar, transformer_class(), symbol_class
 
 
 def accepts(st):
-    grammar = mod()[0]
+    grammar, _, _ = mod()
     try:
         grammar.parse(st)
         return True
@@ -54,151 +48,117 @@ def rejects(st):
     return not accepts(st)
 
 
-def value(st) -> Union[float, list, Error]:
-    grammar, transformer_class = mod()
+def value(st):
+    grammar, transformer, _ = mod()
     try:
         tree = grammar.parse(st)
     except Exception as ex:
         return Error(str(ex))
     else:
-        transformer = transformer_class()
         value = transformer.transform(tree)
         if type(value) is tuple:
             return list(value)
         return value
 
 
-def tree(st):
-    grammar, _ = mod()
-    return grammar.parse(st)
+@lru_cache
+def symbol(x):
+    return mod()[-1](x)
 
 
 class TestAnalisadorSintatico:
-    def test_aceita_variaveis(self):
-        assert accepts("pi")
-        assert accepts("x")
-        assert accepts("x0")
-        assert accepts("variavel_como_nome_longo")
+    def test_aceita_elementos_atomicos(self):
+        for src in [
+            '"hello world"',
+            "42",
+            "3.1415",
+            "#t",
+            "#\\A",
+            "some-lispy-name",
+            "name?",
+        ]:
+            assert accepts(src), f'rejeitou comando "{src}"'
 
-    def test_aceita_numeros_em_varios_formatos(self):
-        assert accepts("42")
-        assert accepts("42.0")
-        assert accepts("3.1415")
-        assert accepts("4.2e1")
-        assert accepts("4.2e+1")
-        assert accepts("12.34e-10")
+    def test_aceita_listas_simples(self):
+        assert accepts("(+ 1 2)")
+        assert accepts("(odd? 42)")
 
-    def testa_aceita_expressoes_matematicas_simples(self):
-        assert accepts("40 + 2")
-        assert accepts("21 * 2")
-        assert accepts("84 / 2")
-        assert accepts("50 - 8")
-        assert accepts("10^5")
+    def test_aceita_listas_aninhadas(self):
+        assert accepts("(let ((x 1) (y 2)) (+ x y))")
+        assert accepts("((diff cos) x)")
 
-    def testa_aceita_expressoes_matematicas_compostas(self):
-        assert accepts("(20 + 20) + 2")
-        assert accepts("(10 + 11) * 2")
-        assert accepts("2 * (2 * (3 + 2) + 11)")
+    def test_aceita_valor_com_quote(self):
+        assert accepts("'(1 2 3)")
+        assert accepts("'symbol")
+        assert accepts("''double-quote")
 
-    def test_calcula_numeros(self):
-        assert value("42") == 42
-        assert value("42.0") == 42.0
+    def test_rejeita_listas_desalinhadas(self):
+        assert rejects(")a b c(")
+        assert rejects("(a b")
+        assert rejects("(a b))")
+
+    def test_rejeita_quotes_inválidos(self):
+        assert rejects("'foo'")
+        assert rejects("foo'")
+        assert rejects("'")
+
+    def test_converte_elementos_atomicos(self):
+        assert value('"hello world"') == "hello world"
+        assert value("42") == 42.0
         assert value("3.1415") == 3.1415
-        assert value("4.2e1") == 4.2e1
-        assert value("4.2e+1") == 4.2e1
-        assert value("12.34e-10") == 12.34e-10
+        assert value("#t") is True
+        assert value("some-lispy-name") == symbol("some-lispy-name")
+        assert value("name?") == symbol("name?")
 
-    def testa_calcula_expressoes_matematicas_simples(self):
-        assert value("40 + 2") == 42
-        assert value("21 * 2") == 42
-        assert value("84 / 2") == 42
-        assert value("50 - 8") == 42
-        assert value("10^5") == 100_000
+    def test_converte_listas(self):
+        assert value("(max 1 2)") == [symbol("max"), 1, 2]
+        assert value("(max (list 1 2 3))") == [symbol("max"), [symbol("list"), 1, 2, 3]]
 
-    @given(Xs, short, nonzero_Xs)
-    def test_precedencia_de_operacoes_basicas(self, x, y, z):
-        assert value(f"{x} + {y} * {z}") == x + y * z
-        assert value(f"{x} + {y} / {z}") == x + y / z
-        assert value(f"{x} - {y} * {z}") == x - y * z
-        assert value(f"{x} * {y} + {z}") == x * y + z
-        
-        if y > 0 or x != 0:
-            assert value(f"{x} ^ {y} + {z}") == x ** y + z
-            assert value(f"{x} ^ {y} * {z}") == x ** y * z
+    def test_converte_quotes(self):
+        assert value("'(1 2 3)") == [symbol("quote"), [1, 2, 3]]
+        assert value("'symbol") == [symbol("quote"), symbol("symbol")]
 
-    @given(Xs, nonzero_Xs, nonzero_Xs)
-    def test_associatividade_a_esquerda(self, x, y, z):
-        assert value(f"{x} - {y} - {z}") == (x - y) - z
-        assert value(f"{x} / {y} / {z}") == (x / y) / z
-        assert value(f"{x} - {y} + {z}") == (x - y) + z
-        assert value(f"{x} / {y} * {z}") == (x / y) * z
+    def test_converte_chars(self):
+        assert value(r"#\A") == "A"
+        assert value(r"#\linefeed") == "\n"
+        assert value(r"#\LineFeed") == "\n"
 
-    def test_calcula_comparacoes(self):
-        assert value("40 > 2")
-        assert value("40 >= 2")
-        assert value("2 >= 2")
-        assert value("4 < 20")
-        assert value("4 <= 20")
-        assert value("4 <= 4")
-        assert value("40 != 2")
-        assert not value("40 == 2")
+    def test_inclui_comando_begin_em_sequencia_de_comandos(self):
+        assert value("(cmd 1)\n(cmd 2)") == [
+            symbol("begin"),
+            [symbol("cmd"), 1],
+            [symbol("cmd"), 2],
+        ]
+        assert value("1 2 3") == [symbol("begin"), 1, 2, 3]
 
-    def test_precedencia_de_comparacoes(self):
-        assert value("2 + 2 > 3") is True
-        assert value("2 + 3 == 5") is True
-
-    def test_rejeita_comparacoes_aninhadas(self):
-        assert rejects("3 > 2 > 1")
-        assert rejects("3 < 2 < 1")
-        assert rejects("3 == 2 == 1")
-
-    @given(nonzero_Xs, short, short)
-    def test_associatividade_a_direita(self, x, y, z):
-        if y != 0 or z > 0: 
-            assert value(f"{x} ^ {y} ^ {z}") == x ** (y ** z)
-
-    def test_calcula_valores_de_variaveis_padrao(self):
-        assert value("pi") == math.pi 
-        assert callable(value("sin"))
-        
-    def test_chamada_de_funcao_simples(self):
-        assert value("cos(pi)") == -1
-        assert value("abs(-2)") == 2
-
-    def test_chamada_de_funcao_de_varios_argumentos(self):
-        assert value("max(1, 2, 3)") == 3
-        assert value("min(1, 2, 3, 4)") == 1
-
-    def test_calcula_negativos(self):
-        assert value("-42") == -42
-        assert value("-2 * 2") == -4
-        assert value("2 * (-2)") == -4
-        assert value("-pi") <= -3.14
-        if value("cos(pi)"):
-            assert value("-cos(pi)") == 1
-        else:
-            assert accepts("-cos(pi)")
-
-    def test_realiza_atribuicao_de_variaveis(self):
-        assert value("x = 21\n2 * x") == 42
-        assert value("x = 0\nx = 21\n2 * x") == 42
-
-    def test_atribuicao_de_variaveis_retorna_valor_salvo(self):
-        assert value("x = 42") == 42
-
-    def test_aceita_comentarios_com_hashtags(self):
-        assert value("42  # a resposta para a pergunta fundamental") == 42
-        assert value("2 + 2  # uma operação simples") == 4
-
-    def test_programa_completo(self):
+    def test_aceita_programa_completo_com_comentário(self):
         src = """
-        # Exemplo de código
-        x = 10
-        y = cos(pi)
-        z = 2 ^ 2 - 2
-        (2 * x - y) * z
-        """
-        print(src)
-        print(tree(src).pretty())
-        assert value(src) == 42
+        ;; Fatorial
+        (define fat (lambda (n) 
+            (if (<= n 1)
+                1
+                (* n (fat (- n 1))))))
 
+        (print (fat 5))
+        """
+        print("Testando comando")
+        print(src)
+        s = symbol
+        assert value(src) == [
+            s("begin"),
+            [
+                s("define"),
+                s("fat"),
+                [
+                    s("lambda"),
+                    [s("n")],
+                    [
+                        s("if"),
+                        [s("<="), s("n"), 1],
+                        1,
+                        [s("*"), s("n"), [s("fat"), [s("-"), s("n"), 1]]],
+                    ],
+                ],
+            ],
+            [s("print"), [s("fat"), 5]],
+        ]
