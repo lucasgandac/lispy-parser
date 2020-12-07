@@ -1,0 +1,77 @@
+============================= test session starts ==============================
+platform linux -- Python 3.9.0, pytest-6.1.2, py-1.9.0, pluggy-0.13.1
+rootdir: /home/chips/aulas/compiladores/trabalhos/lispy-parser/run/150062567
+plugins: json-report-1.2.4, metadata-1.11.0, hypothesis-5.41.4
+collected 12 items
+
+test_parser.py .....F.....F                                              [100%]
+
+=================================== FAILURES ===================================
+____________ TestAnalisadorSintatico.test_rejeita_quotes_inválidos _____________
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7fb1cd5a6040>
+
+    def test_rejeita_quotes_inválidos(self):
+>       assert rejects("'foo'")
+E       assert False
+E        +  where False = rejects("'foo'")
+
+test_parser.py:101: AssertionError
+_____ TestAnalisadorSintatico.test_aceita_programa_completo_com_comentário _____
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7fb1cd608c10>
+
+    def test_aceita_programa_completo_com_comentário(self):
+        src = """
+        ;; Fatorial
+        (define fat (lambda (n)
+            (if (<= n 1)
+                1
+                (* n (fat (- n 1))))))
+    
+        (print (fat 5))
+        """
+        print("Testando comando")
+        print(src)
+        s = symbol
+>       assert value(src) == [
+            s("begin"),
+            [
+                s("define"),
+                s("fat"),
+                [
+                    s("lambda"),
+                    [s("n")],
+                    [
+                        s("if"),
+                        [s("<="), s("n"), 1],
+                        1,
+                        [s("*"), s("n"), [s("fat"), [s("-"), s("n"), 1]]],
+                    ],
+                ],
+            ],
+            [s("print"), [s("fat"), 5]],
+        ]
+E       AssertionError: assert [Symbol(value...'fat'), 5.0]]] == [Symbol(value...e='fat'), 5]]]
+E         At index 1 diff: [Symbol(value='define'), Symbol(value='fat'), [Symbol(value='lambda'), [Symbol(value='n')], [Symbol(value='if'), [Symbol(value='<'), Symbol(value='='), Symbol(value='n'), 1.0], 1.0, [Symbol(value='*'), Symbol(value='n'), [Symbol(value='fat'), [Symbol(value='-'), Symbol(value='n'), 1.0]]]]]] != [Symbol(value='define'), Symbol(value='fat'), [Symbol(value='lambda'), [Symbol(value='n')], [Symbol(value='if'), [Symbol(value='<='), Symbol(value='n'), 1], 1, [Symbol(value='*'), Symbol(value='n'), [Symbol(value='fat'), [Symbol(value='-'), Symbol(value='n'), 1]]]...
+E         
+E         ...Full output truncated (2 lines hidden), use '-vv' to show
+
+test_parser.py:147: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Testando comando
+
+        ;; Fatorial
+        (define fat (lambda (n) 
+            (if (<= n 1)
+                1
+                (* n (fat (- n 1))))))
+
+        (print (fat 5))
+        
+--------------------------------- JSON report ----------------------------------
+JSON report written to: .report.json (11244 bytes)
+=========================== short test summary info ============================
+FAILED test_parser.py::TestAnalisadorSintatico::test_rejeita_quotes_inválidos
+FAILED test_parser.py::TestAnalisadorSintatico::test_aceita_programa_completo_com_comentário
+========================= 2 failed, 10 passed in 0.25s =========================

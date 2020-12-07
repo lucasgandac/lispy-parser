@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform linux -- Python 3.9.0, pytest-6.1.2, py-1.9.0, pluggy-0.13.1
+rootdir: /home/chips/aulas/compiladores/trabalhos/lispy-parser/run/160143403
+plugins: json-report-1.2.4, metadata-1.11.0, hypothesis-5.41.4
+collected 12 items
+
+test_parser.py .....F......                                              [100%]
+
+=================================== FAILURES ===================================
+____________ TestAnalisadorSintatico.test_rejeita_quotes_inválidos _____________
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7fd47ba3c4f0>
+
+    def test_rejeita_quotes_inválidos(self):
+>       assert rejects("'foo'")
+E       assert False
+E        +  where False = rejects("'foo'")
+
+test_parser.py:101: AssertionError
+--------------------------------- JSON report ----------------------------------
+JSON report written to: .report.json (8476 bytes)
+=========================== short test summary info ============================
+FAILED test_parser.py::TestAnalisadorSintatico::test_rejeita_quotes_inválidos
+========================= 1 failed, 11 passed in 0.20s =========================

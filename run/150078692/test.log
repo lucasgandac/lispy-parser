@@ -1,0 +1,131 @@
+============================= test session starts ==============================
+platform linux -- Python 3.9.0, pytest-6.1.2, py-1.9.0, pluggy-0.13.1
+rootdir: /home/chips/aulas/compiladores/trabalhos/lispy-parser/run/150078692
+plugins: json-report-1.2.4, metadata-1.11.0, hypothesis-5.41.4
+collected 12 items
+
+test_parser.py F.....F..FFF                                              [100%]
+
+=================================== FAILURES ===================================
+____________ TestAnalisadorSintatico.test_aceita_elementos_atomicos ____________
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7f607dbb9c40>
+
+    def test_aceita_elementos_atomicos(self):
+        for src in [
+            '"hello world"',
+            "42",
+            "3.1415",
+            "#t",
+            "#\\A",
+            "some-lispy-name",
+            "name?",
+        ]:
+>           assert accepts(src), f'rejeitou comando "{src}"'
+E           AssertionError: rejeitou comando "#t"
+E           assert "No terminal defined for '#' at line 1 col 1\n\n#t\n^\n\nExpecting: {'FALSE', 'LPAR', 'NULL', 'SYMBOL', 'STRING', 'QUOTE', 'NAME', 'TRUE', 'NUMBER'}\n"
+E            +  where "No terminal defined for '#' at line 1 col 1\n\n#t\n^\n\nExpecting: {'FALSE', 'LPAR', 'NULL', 'SYMBOL', 'STRING', 'QUOTE', 'NAME', 'TRUE', 'NUMBER'}\n" = accepts('#t')
+
+test_parser.py:80: AssertionError
+___________ TestAnalisadorSintatico.test_converte_elementos_atomicos ___________
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7f607e42ee80>
+
+    def test_converte_elementos_atomicos(self):
+        assert value('"hello world"') == "hello world"
+        assert value("42") == 42.0
+        assert value("3.1415") == 3.1415
+>       assert value("#t") is True
+E       assert "No terminal defined for '#' at line 1 col 1\n\n#t\n^\n\nExpecting: {'FALSE', 'LPAR', 'NULL', 'SYMBOL', 'STRING', 'QUOTE', 'NAME', 'TRUE', 'NUMBER'}\n" is True
+E        +  where "No terminal defined for '#' at line 1 col 1\n\n#t\n^\n\nExpecting: {'FALSE', 'LPAR', 'NULL', 'SYMBOL', 'STRING', 'QUOTE', 'NAME', 'TRUE', 'NUMBER'}\n" = value('#t')
+
+test_parser.py:109: AssertionError
+_________________ TestAnalisadorSintatico.test_converte_chars __________________
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7f607dad0c10>
+
+    def test_converte_chars(self):
+>       assert value(r"#\A") == "A"
+E       assert "No terminal ..., 'NUMBER'}\n" == 'A'
+E         - A
+E         + No terminal defined for '#' at line 1 col 1
+E         + 
+E         + #\A
+E         + ^
+E         + 
+E         + Expecting: {'FALSE', 'LPAR', 'NULL', 'SYMBOL', 'STRING', 'QUOTE', 'NAME', 'TRUE', 'NUMBER'}
+
+test_parser.py:122: AssertionError
+__ TestAnalisadorSintatico.test_inclui_comando_begin_em_sequencia_de_comandos __
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7f607db168b0>
+
+    def test_inclui_comando_begin_em_sequencia_de_comandos(self):
+>       assert value("(cmd 1)\n(cmd 2)") == [
+            symbol("begin"),
+            [symbol("cmd"), 1],
+            [symbol("cmd"), 2],
+        ]
+E       AssertionError: assert Tree('start', [[Symbol(value=Token('NAME', 'cmd')), 1.0], [Symbol(value=Token('NAME', 'cmd')), 2.0]]) == [Symbol(value='begin'), [Symbol(value='cmd'), 1], [Symbol(value='cmd'), 2]]
+E        +  where Tree('start', [[Symbol(value=Token('NAME', 'cmd')), 1.0], [Symbol(value=Token('NAME', 'cmd')), 2.0]]) = value('(cmd 1)\n(cmd 2)')
+
+test_parser.py:127: AssertionError
+_____ TestAnalisadorSintatico.test_aceita_programa_completo_com_comentário _____
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7f607dad0460>
+
+    def test_aceita_programa_completo_com_comentário(self):
+        src = """
+        ;; Fatorial
+        (define fat (lambda (n)
+            (if (<= n 1)
+                1
+                (* n (fat (- n 1))))))
+    
+        (print (fat 5))
+        """
+        print("Testando comando")
+        print(src)
+        s = symbol
+>       assert value(src) == [
+            s("begin"),
+            [
+                s("define"),
+                s("fat"),
+                [
+                    s("lambda"),
+                    [s("n")],
+                    [
+                        s("if"),
+                        [s("<="), s("n"), 1],
+                        1,
+                        [s("*"), s("n"), [s("fat"), [s("-"), s("n"), 1]]],
+                    ],
+                ],
+            ],
+            [s("print"), [s("fat"), 5]],
+        ]
+E       AssertionError: assert Tree('start', [[Symbol(value=Token('NAME', 'define')), Symbol(value=Token('NAME', 'fat')), [Symbol(value=Token('NAME',...lue=Token('NAME', 'n')), 1.0]]]]]], [Symbol(value=Token('NAME', 'print')), [Symbol(value=Token('NAME', 'fat')), 5.0]]]) == [Symbol(value='begin'), [Symbol(value='define'), Symbol(value='fat'), [Symbol(value='lambda'), [Symbol(value='n')], [S...bol(value='*'), Symbol(value='n'), [Symbol(value='fat'), [...]]]]]], [Symbol(value='print'), [Symbol(value='fat'), 5]]]
+E        +  where Tree('start', [[Symbol(value=Token('NAME', 'define')), Symbol(value=Token('NAME', 'fat')), [Symbol(value=Token('NAME',...lue=Token('NAME', 'n')), 1.0]]]]]], [Symbol(value=Token('NAME', 'print')), [Symbol(value=Token('NAME', 'fat')), 5.0]]]) = value('\n        ;; Fatorial\n        (define fat (lambda (n) \n            (if (<= n 1)\n                1\n                (* n (fat (- n 1))))))\n\n        (print (fat 5))\n        ')
+
+test_parser.py:147: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Testando comando
+
+        ;; Fatorial
+        (define fat (lambda (n) 
+            (if (<= n 1)
+                1
+                (* n (fat (- n 1))))))
+
+        (print (fat 5))
+        
+--------------------------------- JSON report ----------------------------------
+JSON report written to: .report.json (16160 bytes)
+=========================== short test summary info ============================
+FAILED test_parser.py::TestAnalisadorSintatico::test_aceita_elementos_atomicos
+FAILED test_parser.py::TestAnalisadorSintatico::test_converte_elementos_atomicos
+FAILED test_parser.py::TestAnalisadorSintatico::test_converte_chars - assert ...
+FAILED test_parser.py::TestAnalisadorSintatico::test_inclui_comando_begin_em_sequencia_de_comandos
+FAILED test_parser.py::TestAnalisadorSintatico::test_aceita_programa_completo_com_comentário
+========================= 5 failed, 7 passed in 0.23s ==========================

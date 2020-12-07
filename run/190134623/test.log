@@ -1,0 +1,112 @@
+============================= test session starts ==============================
+platform linux -- Python 3.9.0, pytest-6.1.2, py-1.9.0, pluggy-0.13.1
+rootdir: /home/chips/aulas/compiladores/trabalhos/lispy-parser/run/190134623
+plugins: json-report-1.2.4, metadata-1.11.0, hypothesis-5.41.4
+collected 12 items
+
+test_parser.py .......FFFFF                                              [100%]
+
+=================================== FAILURES ===================================
+_________________ TestAnalisadorSintatico.test_converte_listas _________________
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7facfb7a6d00>
+
+    def test_converte_listas(self):
+>       assert value("(max 1 2)") == [symbol("max"), 1, 2]
+E       AssertionError: assert Tree('start', [Symbol(value='max'), 1.0, 2.0]) == [Symbol(value='max'), 1, 2]
+E        +  where Tree('start', [Symbol(value='max'), 1.0, 2.0]) = value('(max 1 2)')
+
+test_parser.py:114: AssertionError
+_________________ TestAnalisadorSintatico.test_converte_quotes _________________
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7facfb85b370>
+
+    def test_converte_quotes(self):
+>       assert value("'(1 2 3)") == [symbol("quote"), [1, 2, 3]]
+E       assert Tree('symbol', [Token('QUOTE', "'(1 2 3)")]) == [Symbol(value='quote'), [1, 2, 3]]
+E        +  where Tree('symbol', [Token('QUOTE', "'(1 2 3)")]) = value("'(1 2 3)")
+
+test_parser.py:118: AssertionError
+_________________ TestAnalisadorSintatico.test_converte_chars __________________
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7facfb7db820>
+
+    def test_converte_chars(self):
+>       assert value(r"#\A") == "A"
+E       AssertionError: assert Symbol(value=Token('CHAR', '#\\A')) == 'A'
+E        +  where Symbol(value=Token('CHAR', '#\\A')) = value('#\\A')
+
+test_parser.py:122: AssertionError
+__ TestAnalisadorSintatico.test_inclui_comando_begin_em_sequencia_de_comandos __
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7facfb7c3d30>
+
+    def test_inclui_comando_begin_em_sequencia_de_comandos(self):
+>       assert value("(cmd 1)\n(cmd 2)") == [
+            symbol("begin"),
+            [symbol("cmd"), 1],
+            [symbol("cmd"), 2],
+        ]
+E       AssertionError: assert Tree('start', [[Symbol(value='cmd'), 1.0], [Symbol(value='cmd'), 2.0]]) == [Symbol(value='begin'), [Symbol(value='cmd'), 1], [Symbol(value='cmd'), 2]]
+E        +  where Tree('start', [[Symbol(value='cmd'), 1.0], [Symbol(value='cmd'), 2.0]]) = value('(cmd 1)\n(cmd 2)')
+
+test_parser.py:127: AssertionError
+_____ TestAnalisadorSintatico.test_aceita_programa_completo_com_comentário _____
+
+self = <test_parser.TestAnalisadorSintatico object at 0x7facfb7ac0a0>
+
+    def test_aceita_programa_completo_com_comentário(self):
+        src = """
+        ;; Fatorial
+        (define fat (lambda (n)
+            (if (<= n 1)
+                1
+                (* n (fat (- n 1))))))
+    
+        (print (fat 5))
+        """
+        print("Testando comando")
+        print(src)
+        s = symbol
+>       assert value(src) == [
+            s("begin"),
+            [
+                s("define"),
+                s("fat"),
+                [
+                    s("lambda"),
+                    [s("n")],
+                    [
+                        s("if"),
+                        [s("<="), s("n"), 1],
+                        1,
+                        [s("*"), s("n"), [s("fat"), [s("-"), s("n"), 1]]],
+                    ],
+                ],
+            ],
+            [s("print"), [s("fat"), 5]],
+        ]
+E       assert "No terminal defined for '(' at line 3 col 29\n\n        (define fat (lambda (n) \n                            ^\n\nExpecting: {'__ANON_1', 'NUMBER', 'BOOL', 'NAME', 'CHAR', 'STRING'}\n" == [Symbol(value='begin'), [Symbol(value='define'), Symbol(value='fat'), [Symbol(value='lambda'), [Symbol(value='n')], [S...bol(value='*'), Symbol(value='n'), [Symbol(value='fat'), [...]]]]]], [Symbol(value='print'), [Symbol(value='fat'), 5]]]
+E        +  where "No terminal defined for '(' at line 3 col 29\n\n        (define fat (lambda (n) \n                            ^\n\nExpecting: {'__ANON_1', 'NUMBER', 'BOOL', 'NAME', 'CHAR', 'STRING'}\n" = value('\n        ;; Fatorial\n        (define fat (lambda (n) \n            (if (<= n 1)\n                1\n                (* n (fat (- n 1))))))\n\n        (print (fat 5))\n        ')
+
+test_parser.py:147: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Testando comando
+
+        ;; Fatorial
+        (define fat (lambda (n) 
+            (if (<= n 1)
+                1
+                (* n (fat (- n 1))))))
+
+        (print (fat 5))
+        
+--------------------------------- JSON report ----------------------------------
+JSON report written to: .report.json (14415 bytes)
+=========================== short test summary info ============================
+FAILED test_parser.py::TestAnalisadorSintatico::test_converte_listas - Assert...
+FAILED test_parser.py::TestAnalisadorSintatico::test_converte_quotes - assert...
+FAILED test_parser.py::TestAnalisadorSintatico::test_converte_chars - Asserti...
+FAILED test_parser.py::TestAnalisadorSintatico::test_inclui_comando_begin_em_sequencia_de_comandos
+FAILED test_parser.py::TestAnalisadorSintatico::test_aceita_programa_completo_com_comentário
+========================= 5 failed, 7 passed in 0.19s ==========================
