@@ -31,5 +31,5 @@ id,cfg-bnf,cfg-ebnf,cfg-reduce
 160049733,True,True,False
 130121622,True,True,True
 160015006,True,True,True
-150141220,False,False,False
-170033066,False,False,False
+150141220,True,True,True
+170033066,True,True,True

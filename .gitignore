@@ -3,3 +3,4 @@ parser-gabarito.py
 __pycache__
 .pytest-cache
 responses.csv
+run/

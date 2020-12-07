@@ -29,7 +29,7 @@ data["timestamp"] = pd.to_datetime(data["timestamp"])
 
 
 deadline = datetime.datetime(2020, 11, 3, 23, 59, 59)
-deadline_soft = datetime.datetime(2020, 11, 7, 23, 59, 59)
+deadline_soft = datetime.datetime(2020, 11, 11, 23, 59, 59)
 
 test_file = "test_parser.py"
 tests = (DIR / test_file).read_text()
@@ -69,7 +69,7 @@ for i, (_, row) in enumerate(data.iterrows()):
     meta["competencies"] = competencies = []
     if deadline < timestamp <= deadline_soft:
         n -= 2
-    elif timestamp > deadline:
+    elif timestamp > deadline_soft:
         n = 0
 
     if n >= 6:
